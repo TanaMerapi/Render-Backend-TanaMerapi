@@ -1,0 +1,95 @@
+### Variables
+@baseUrl = http://localhost:5000
+@contentType = application/json
+
+### ===== ADMIN REGISTRATION =====
+
+### Register New Admin User
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Register Second Admin User
+POST {{baseUrl}}/api/auth/register
+Content-Type: {{contentType}}
+
+{
+  "username": "superadmin",
+  "password": "superadmin123"
+}
+
+### ===== ADMIN LOGIN & AUTHENTICATION =====
+
+### Login with Admin Credentials
+POST {{baseUrl}}/api/auth/login
+Content-Type: {{contentType}}
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Refresh Token (get new access token)
+GET {{baseUrl}}/api/auth/token
+
+### Logout
+DELETE {{baseUrl}}/api/auth/logout
+
+### ===== TESTING PROTECTED ROUTES =====
+### Note: Replace YOUR_ACCESS_TOKEN with the actual token from login response
+
+### Test Protected Route - Get All Menu Items (Admin)
+GET {{baseUrl}}/api/menu-items
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+### Test Protected Route - Create Menu Item (Admin)
+POST {{baseUrl}}/api/menu-items
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="name"
+
+Test Menu Item
+------WebKitFormBoundary
+Content-Disposition: form-data; name="description"
+
+This is a test menu item
+------WebKitFormBoundary
+Content-Disposition: form-data; name="price"
+
+25000
+------WebKitFormBoundary
+Content-Disposition: form-data; name="image"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test-image.jpg
+------WebKitFormBoundary--
+
+### ===== PUBLIC ROUTES (No Authentication Required) =====
+
+### Get All Packages (Public)
+GET {{baseUrl}}/api/packages
+
+### Get Packages by Type (Public)
+GET {{baseUrl}}/api/packages/type/jeep
+
+### Get All Promotions (Public)
+GET {{baseUrl}}/api/promotions
+
+### Get All Slides (Public)
+GET {{baseUrl}}/api/slides
+
+### Get Social Media Links (Public)
+GET {{baseUrl}}/api/social-media
+
+### ===== DATABASE CHECK =====
+
+### Check if user exists in database (for testing)
+### This assumes you have a users endpoint - you might need to create one
+GET {{baseUrl}}/api/users
+Authorization: Bearer YOUR_ACCESS_TOKEN
