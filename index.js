@@ -1,5 +1,3 @@
-// Updated index.js with improved CORS configuration
-
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -15,7 +13,6 @@ import SocialMediaRoute from './routes/SocialMediaRoute.js';
 import FileUploadRoute from './routes/FileUploadRoute.js';
 import SiteSettingRoute from './routes/SiteSettingRoute.js';
 import initPromotionScheduler from './utils/PromotionScheduler.js';
-import { verifyCloudinaryConnection } from './config/cloudinary.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -30,75 +27,46 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Log application environment
+console.log('Starting server with environment:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('CLIENT_URL:', process.env.CLIENT_URL);
+
 // Middleware
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing form data
 app.use(express.static('public'));
 
-// Get allowed origins from environment or set defaults
-const getAllowedOrigins = () => {
-  const origins = [process.env.CLIENT_URL];
-  
-  // Add localhost for development
-  if (process.env.NODE_ENV !== 'production') {
-    origins.push('http://localhost:3000');
-  }
-  
-  // Make sure we have at least one origin
-  if (!origins[0]) {
-    origins.push('https://vercel-frontend-tana-merapi.vercel.app');
-  }
-  
-  console.log('Allowed CORS origins:', origins);
-  return origins;
-};
-
-// Configure CORS with proper credentials support
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = getAllowedOrigins();
-    
-    // Allow requests with no origin (like mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS blocked request from origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
+// *** CORS Configuration - Simplified to fix 403 issues ***
+// Allow all origins for now to troubleshoot the 403 issue
+app.use(cors({
+  origin: '*', // Allow all origins temporarily
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
-    'Origin',
-    'Accept',
-    'X-Requested-With',
-    'Cookie',
-    'Set-Cookie',
-    'Access-Control-Allow-Credentials'
-  ],
-  exposedHeaders: ['Set-Cookie']
-};
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With']
+}));
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
+// Add headers to fix CORS issues
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Log request details for debugging
+  console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin || 'No origin'}`);
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-// CORS pre-flight for all routes
-app.options('*', cors(corsOptions));
-
-// Diagnostic route to check API status
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Tanah Merapi API is running',
-    env: process.env.NODE_ENV,
-    version: '1.0.0',
-    clientUrl: process.env.CLIENT_URL,
-    timestamp: new Date().toISOString()
-  });
+// Log all requests for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
 // Routes
@@ -112,24 +80,23 @@ app.use('/api/social-media', SocialMediaRoute);
 app.use('/api/upload', FileUploadRoute);
 app.use('/api/site-settings', SiteSettingRoute);
 
-// Debug route for checking request headers
-app.get('/api/debug/headers', (req, res) => {
-  res.json({
-    headers: req.headers,
-    origin: req.headers.origin,
-    host: req.headers.host,
-    method: req.method
+// Default route to check API status
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Tanah Merapi API is running',
+    env: process.env.NODE_ENV,
+    version: '1.0.0',
+    cors: 'Allowing all origins temporarily'
   });
 });
 
-// Debug route for Cloudinary
-app.get('/api/debug/cloudinary', async (req, res) => {
-  const isConnected = await verifyCloudinaryConnection();
+// CORS test route
+app.get('/api/cors-test', (req, res) => {
   res.json({
-    connected: isConnected,
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    apiKeySet: !!process.env.CLOUDINARY_API_KEY,
-    apiSecretSet: !!process.env.CLOUDINARY_API_SECRET
+    success: true,
+    message: 'CORS is working correctly',
+    origin: req.headers.origin || 'No origin header',
+    headers: req.headers
   });
 });
 
@@ -148,14 +115,6 @@ app.use((err, req, res, next) => {
   if (err.name === 'MulterError') {
     return res.status(400).json({ 
       message: `Upload error: ${err.message}` 
-    });
-  }
-  
-  // Handle CORS errors
-  if (err.message.includes('CORS')) {
-    return res.status(403).json({
-      message: 'CORS policy violation',
-      error: err.message
     });
   }
   
