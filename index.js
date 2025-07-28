@@ -38,7 +38,15 @@ app.use(express.static('public'));
 
 // Get allowed origins from environment or set defaults
 const getAllowedOrigins = () => {
-  const origins = [process.env.CLIENT_URL];
+  const origins = [];
+  
+  // Add production frontend URL
+  if (process.env.CLIENT_URL) {
+    origins.push(process.env.CLIENT_URL);
+  }
+  
+  // Add Vercel frontend explicitly
+  origins.push('https://vercel-frontend-tana-merapi.vercel.app');
   
   // Add localhost for development
   if (process.env.NODE_ENV !== 'production') {
@@ -46,8 +54,8 @@ const getAllowedOrigins = () => {
   }
   
   // Make sure we have at least one origin
-  if (!origins[0]) {
-    origins.push('https://vercel-frontend-tana-merapi.vercel.app');
+  if (origins.length === 0) {
+    origins.push('*'); // Allow all origins as fallback (not recommended for production)
   }
   
   console.log('Allowed CORS origins:', origins);
@@ -62,7 +70,7 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
       callback(null, true);
     } else {
       console.warn(`CORS blocked request from origin: ${origin}`);

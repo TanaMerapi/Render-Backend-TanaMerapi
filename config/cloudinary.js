@@ -63,17 +63,19 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'tanah-merapi',
-    allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif'],
     transformation: [{ width: 1000, height: 1000, crop: 'limit' }],
     // Add a public_id prefix to avoid name collisions
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       return `upload-${uniqueSuffix}`;
-    }
+    },
+    // Set resource type to auto to handle different file types
+    resource_type: 'auto'
   }
 });
 
-// Create multer upload middleware with limits
+// Create multer upload middleware with limits and better error handling
 const uploadCloud = multer({
   storage: storage,
   limits: {
@@ -82,9 +84,11 @@ const uploadCloud = multer({
   fileFilter: (req, file, cb) => {
     // Check if the file is an image
     if (!file.mimetype.startsWith('image/')) {
+      console.warn(`Rejected file upload with mimetype: ${file.mimetype}`);
       return cb(new Error('Only image files are allowed!'), false);
     }
     
+    console.log(`Accepting file upload: ${file.originalname} (${file.mimetype})`);
     cb(null, true);
   }
 });
