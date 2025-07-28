@@ -45,6 +45,9 @@ app.use(cors({
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
+    'Origin',
+    'Accept',
+    'X-Requested-With',
     'Cookie',
     'Set-Cookie',
     'Access-Control-Allow-Credentials'
