@@ -1,4 +1,3 @@
-// services/CloudinaryService.js
 import { cloudinary } from '../config/cloudinary.js';
 
 // Helper function to extract public ID from Cloudinary URL
@@ -32,24 +31,31 @@ export const getPublicIdFromUrl = (url) => {
 export const deleteCloudinaryImage = async (imageUrl) => {
   try {
     if (!imageUrl || !imageUrl.includes('cloudinary.com')) {
+      console.log('Not a Cloudinary URL, skipping deletion:', imageUrl);
       return;
     }
     
     const publicId = getPublicIdFromUrl(imageUrl);
     if (publicId) {
-      await cloudinary.v2.uploader.destroy(publicId);
-      console.log(`Deleted image with public ID: ${publicId}`);
+      console.log(`Attempting to delete image with public ID: ${publicId}`);
+      const result = await cloudinary.uploader.destroy(publicId);
+      console.log(`Deleted image with public ID: ${publicId}`, result);
+      return result;
+    } else {
+      console.warn('Could not extract public ID from URL:', imageUrl);
     }
   } catch (error) {
     console.error('Error deleting image from Cloudinary:', error);
-    throw error;
+    // Don't throw the error - log it and continue
   }
 };
 
 // Upload image to Cloudinary
 export const uploadToCloudinary = async (filePath) => {
   try {
-    const result = await cloudinary.v2.uploader.upload(filePath);
+    console.log('Uploading to Cloudinary:', filePath);
+    const result = await cloudinary.uploader.upload(filePath);
+    console.log('Cloudinary upload success:', result.secure_url);
     return result.secure_url;
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);

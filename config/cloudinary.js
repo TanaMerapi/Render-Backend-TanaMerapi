@@ -21,11 +21,18 @@ const configureCloudinary = () => {
     console.error('File uploads will not work correctly!');
   }
   
+  // Log current environment variables for debugging (without secrets)
+  console.log('Cloudinary configuration:');
+  console.log(`- CLOUDINARY_CLOUD_NAME: ${process.env.CLOUDINARY_CLOUD_NAME || 'NOT SET'}`);
+  console.log(`- CLOUDINARY_API_KEY: ${process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET'}`);
+  console.log(`- CLOUDINARY_API_SECRET: ${process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET'}`);
+  
   // Configure Cloudinary
   cloudinaryV2.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true // Always use HTTPS
   });
   
   console.log(`Cloudinary configured with cloud name: ${process.env.CLOUDINARY_CLOUD_NAME}`);
@@ -35,6 +42,21 @@ const configureCloudinary = () => {
 
 // Initialize Cloudinary
 const cloudinary = configureCloudinary();
+
+// Verify the connection
+const verifyCloudinaryConnection = async () => {
+  try {
+    const result = await cloudinary.api.ping();
+    console.log('Cloudinary connection verified:', result);
+    return true;
+  } catch (error) {
+    console.error('Failed to connect to Cloudinary:', error);
+    return false;
+  }
+};
+
+// Run verification (async, but we don't need to wait for it)
+verifyCloudinaryConnection();
 
 // Setup storage with more robust error handling
 const storage = new CloudinaryStorage({
@@ -46,7 +68,6 @@ const storage = new CloudinaryStorage({
     // Add a public_id prefix to avoid name collisions
     public_id: (req, file) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      const fileExtension = file.originalname.split('.').pop();
       return `upload-${uniqueSuffix}`;
     }
   }
@@ -69,4 +90,4 @@ const uploadCloud = multer({
 });
 
 // Export both the cloudinary instance and the upload middleware
-export { cloudinary, uploadCloud };
+export { cloudinary, uploadCloud, verifyCloudinaryConnection };
