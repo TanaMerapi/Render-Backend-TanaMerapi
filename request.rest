@@ -14,7 +14,7 @@ Content-Type: {{contentType}}
 }
 
 ### Register Second Admin User
-POST {{baseUrl}}/api/auth/register
+POST https://render-backend-tanamerapi.onrender.com/api/auth/register
 Content-Type: {{contentType}}
 
 {
@@ -25,7 +25,7 @@ Content-Type: {{contentType}}
 ### ===== ADMIN LOGIN & AUTHENTICATION =====
 
 ### Login with Admin Credentials
-POST {{baseUrl}}/api/auth/login
+POST https://render-backend-tanamerapi.onrender.com/api/auth/login
 Content-Type: {{contentType}}
 
 {

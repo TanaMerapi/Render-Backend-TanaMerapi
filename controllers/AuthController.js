@@ -1,8 +1,9 @@
+// AuthController.js - Updated cookie settings for production deployment
 import User from '../models/UserModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-// Register controller (ADD THIS TO YOUR EXISTING AuthController.js)
+// Register controller
 export const register = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -79,12 +80,13 @@ export const login = async (req, res) => {
       where: { id: userId }
     });
     
-    // Set refresh token in cookie
+    // Set refresh token in cookie with updated settings for cross-origin
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000, // 1 day
-      secure: process.env.NODE_ENV === 'production', // secure in production
-      sameSite: 'strict'
+      secure: true, // Always true for production HTTPS
+      sameSite: 'none', // Required for cross-origin cookies
+      domain: '.onrender.com' // Set domain for Render
     });
     
     // Send response with access token
@@ -96,7 +98,7 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -107,7 +109,7 @@ export const refreshToken = async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
     
     if (!refreshToken) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ message: 'Unauthorized - No refresh token' });
     }
     
     // Find user with this refresh token
@@ -116,13 +118,14 @@ export const refreshToken = async (req, res) => {
     });
     
     if (!user) {
-      return res.status(403).json({ message: 'Forbidden' });
+      return res.status(403).json({ message: 'Forbidden - Invalid refresh token' });
     }
     
     // Verify refresh token
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
       if (err) {
-        return res.status(403).json({ message: 'Forbidden' });
+        console.error('JWT verification error:', err);
+        return res.status(403).json({ message: 'Forbidden - Token verification failed' });
       }
       
       // Generate new access token
@@ -135,7 +138,7 @@ export const refreshToken = async (req, res) => {
       res.json({ accessToken });
     });
   } catch (error) {
-    console.error(error);
+    console.error('Refresh token error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -161,11 +164,17 @@ export const logout = async (req, res) => {
       });
     }
     
-    // Clear refresh token cookie
-    res.clearCookie('refreshToken');
+    // Clear refresh token cookie with same settings as when it was set
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      domain: '.onrender.com'
+    });
+    
     res.status(200).json({ message: 'Logged out' });
   } catch (error) {
-    console.error(error);
+    console.error('Logout error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
