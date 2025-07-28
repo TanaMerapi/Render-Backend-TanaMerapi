@@ -1,3 +1,4 @@
+// index.js - Updated for PostgreSQL and Cloudinary
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -27,47 +28,29 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Log application environment
-console.log('Starting server with environment:');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('CLIENT_URL:', process.env.CLIENT_URL);
-
 // Middleware
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing form data
 app.use(express.static('public'));
 
-// *** CORS Configuration - Simplified to fix 403 issues ***
-// Allow all origins for now to troubleshoot the 403 issue
+// Configure CORS
 app.use(cors({
-  origin: '*', // Allow all origins temporarily
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With']
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Origin',
+    'Accept',
+    'X-Requested-With',
+    'Cookie',
+    'Set-Cookie',
+    'Access-Control-Allow-Credentials'
+  ],
+  exposedHeaders: ['Set-Cookie']
 }));
-
-// Add headers to fix CORS issues
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Log request details for debugging
-  console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin || 'No origin'}`);
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
-
-// Log all requests for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
 
 // Routes
 app.use('/api/auth', AuthRoute);
@@ -85,24 +68,13 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Tanah Merapi API is running',
     env: process.env.NODE_ENV,
-    version: '1.0.0',
-    cors: 'Allowing all origins temporarily'
-  });
-});
-
-// CORS test route
-app.get('/api/cors-test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'CORS is working correctly',
-    origin: req.headers.origin || 'No origin header',
-    headers: req.headers
+    version: '1.0.0'
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error occurred:', err);
+  console.error(err.stack);
   
   // Handle file size limits exceeded
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -121,7 +93,7 @@ app.use((err, req, res, next) => {
   // Default error response
   res.status(500).json({ 
     message: 'Something went wrong on the server',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
