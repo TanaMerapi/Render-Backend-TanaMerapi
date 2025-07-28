@@ -1,4 +1,5 @@
-// index.js - Updated for PostgreSQL and Cloudinary
+// Updated index.js with improved CORS configuration
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -14,6 +15,7 @@ import SocialMediaRoute from './routes/SocialMediaRoute.js';
 import FileUploadRoute from './routes/FileUploadRoute.js';
 import SiteSettingRoute from './routes/SiteSettingRoute.js';
 import initPromotionScheduler from './utils/PromotionScheduler.js';
+import { verifyCloudinaryConnection } from './config/cloudinary.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -34,11 +36,41 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For parsing form data
 app.use(express.static('public'));
 
-// Configure CORS
-app.use(cors({
-  origin: '*',
+// Get allowed origins from environment or set defaults
+const getAllowedOrigins = () => {
+  const origins = [process.env.CLIENT_URL];
+  
+  // Add localhost for development
+  if (process.env.NODE_ENV !== 'production') {
+    origins.push('http://localhost:3000');
+  }
+  
+  // Make sure we have at least one origin
+  if (!origins[0]) {
+    origins.push('https://vercel-frontend-tana-merapi.vercel.app');
+  }
+  
+  console.log('Allowed CORS origins:', origins);
+  return origins;
+};
+
+// Configure CORS with proper credentials support
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
@@ -50,7 +82,24 @@ app.use(cors({
     'Access-Control-Allow-Credentials'
   ],
   exposedHeaders: ['Set-Cookie']
-}));
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// CORS pre-flight for all routes
+app.options('*', cors(corsOptions));
+
+// Diagnostic route to check API status
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Tanah Merapi API is running',
+    env: process.env.NODE_ENV,
+    version: '1.0.0',
+    clientUrl: process.env.CLIENT_URL,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Routes
 app.use('/api/auth', AuthRoute);
@@ -63,18 +112,30 @@ app.use('/api/social-media', SocialMediaRoute);
 app.use('/api/upload', FileUploadRoute);
 app.use('/api/site-settings', SiteSettingRoute);
 
-// Default route to check API status
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Tanah Merapi API is running',
-    env: process.env.NODE_ENV,
-    version: '1.0.0'
+// Debug route for checking request headers
+app.get('/api/debug/headers', (req, res) => {
+  res.json({
+    headers: req.headers,
+    origin: req.headers.origin,
+    host: req.headers.host,
+    method: req.method
+  });
+});
+
+// Debug route for Cloudinary
+app.get('/api/debug/cloudinary', async (req, res) => {
+  const isConnected = await verifyCloudinaryConnection();
+  res.json({
+    connected: isConnected,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    apiKeySet: !!process.env.CLOUDINARY_API_KEY,
+    apiSecretSet: !!process.env.CLOUDINARY_API_SECRET
   });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error occurred:', err);
   
   // Handle file size limits exceeded
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -90,10 +151,18 @@ app.use((err, req, res, next) => {
     });
   }
   
+  // Handle CORS errors
+  if (err.message.includes('CORS')) {
+    return res.status(403).json({
+      message: 'CORS policy violation',
+      error: err.message
+    });
+  }
+  
   // Default error response
   res.status(500).json({ 
     message: 'Something went wrong on the server',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
