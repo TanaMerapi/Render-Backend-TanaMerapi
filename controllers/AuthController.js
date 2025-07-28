@@ -2,6 +2,8 @@
 import User from '../models/UserModel.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // Register controller
 export const register = async (req, res) => {
@@ -86,7 +88,7 @@ export const login = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       secure: true, // Always true for production HTTPS
       sameSite: 'none', // Required for cross-origin cookies
-      domain: '.onrender.com' // Set domain for Render
+      domain: process.env.CLIENT_URL
     });
     
     // Send response with access token
@@ -169,7 +171,7 @@ export const logout = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      domain: '.onrender.com'
+      domain: process.env.CLIENT_URL,
     });
     
     res.status(200).json({ message: 'Logged out' });
