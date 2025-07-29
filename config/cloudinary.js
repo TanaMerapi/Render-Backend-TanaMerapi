@@ -94,4 +94,4 @@ const uploadCloud = multer({
 });
 
 // Export both the cloudinary instance and the upload middleware
-export { cloudinary, uploadCloud, verifyCloudinaryConnection };
+export { cloudinary, uploadCloud, verifyCloudinaryConnection };1

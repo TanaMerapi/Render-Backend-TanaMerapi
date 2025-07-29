@@ -47,6 +47,9 @@ const getAllowedOrigins = () => {
   
   // Add Vercel frontend explicitly
   origins.push('https://vercel-frontend-tana-merapi.vercel.app');
+
+  // Add tanamerapi domain explicitly
+  origins.push('https://tanamerapi.com');
   
   // Add localhost for development
   if (process.env.NODE_ENV !== 'production') {
